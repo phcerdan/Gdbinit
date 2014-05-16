@@ -2140,17 +2140,17 @@ define context
         datawin
     end
 
-    color $COLOR_SEPARATOR
-    printf "--------------------------------------------------------------------------"
-    if ($64BITS == 1)
-	    printf "---------------------------------------------"
-	end
-	color $COLOR_SEPARATOR
-	color_bold
-    printf "[code]\n"
-    color_reset
     set $context_i = $CONTEXTSIZE_CODE
     if ($context_i > 0)
+        color $COLOR_SEPARATOR
+        printf "--------------------------------------------------------------------------"
+        if ($64BITS == 1)
+    	    printf "---------------------------------------------"
+    	end
+    	color $COLOR_SEPARATOR
+    	color_bold
+        printf "[code]\n"
+        color_reset
         if ($SETCOLOR1STLINE == 1)	
 	        color $GREEN
             if ($ARM == 1)
@@ -2169,20 +2169,22 @@ define context
             end
 	    end
         set $context_i--
+
+        while ($context_i > 0)
+            x /i
+            set $context_i--
+        end
+
+        color $COLOR_SEPARATOR
+        printf "----------------------------------------"
+        printf "----------------------------------------"
+        if ($64BITS == 1)
+            printf "---------------------------------------------\n"
+    	else
+    	    printf "\n"
+    	end
+        color_reset
     end
-    while ($context_i > 0)
-        x /i
-        set $context_i--
-    end
-    color $COLOR_SEPARATOR
-    printf "----------------------------------------"
-    printf "----------------------------------------"
-    if ($64BITS == 1)
-        printf "---------------------------------------------\n"
-	else
-	    printf "\n"
-	end
-    color_reset
 end
 document context
 Syntax: context
