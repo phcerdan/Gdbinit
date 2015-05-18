@@ -15,16 +15,6 @@ Usage: stack <COUNT>
 end
 
 
-define frame
-  info frame
-  info args
-  info locals
-end
-document frame
-Print stack frame.
-end
-
-
 define func
   if $argc == 0
     info functions
