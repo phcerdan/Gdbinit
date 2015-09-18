@@ -4,24 +4,9 @@
 #
 # Copyright (C) 2009 Benjamin Schindler <bschindler@inf.ethz.ch>
 #
-# Eigen is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.
-#
-# Alternatively, you can redistribute it and/or
-# modify it under the terms of the GNU General Public License as
-# published by the Free Software Foundation; either version 2 of
-# the License, or (at your option) any later version.
-#
-# Eigen is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License or the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public
-# License and a copy of the GNU General Public License along with
-# Eigen. If not, see <http://www.gnu.org/licenses/>.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # Pretty printers for Eigen::Matrix
 # This is still pretty basic as the python extension to gdb is still pretty basic.
@@ -31,9 +16,15 @@
 
 # To use it:
 #
-# * create a directory and put the file as well as an empty __init__.py in that directory
+# * Create a directory and put the file as well as an empty __init__.py in
+#   that directory.
 # * Create a ~/.gdbinit file, that contains the following:
-
+#      python
+#      import sys
+#      sys.path.insert(0, '/path/to/eigen/printer/directory')
+#      from printers import register_eigen_printers
+#      register_eigen_printers (None)
+#      end
 
 import gdb
 import re
@@ -41,10 +32,14 @@ import itertools
 
 
 class EigenMatrixPrinter:
-	"Print Eigen Matrix of some kind"
+	"Print Eigen Matrix or Array of some kind"
 
-	def __init__(self, val):
+	def __init__(self, variety, val):
 		"Extract all the necessary information"
+
+		# Save the variety (presumably "Matrix" or "Array") for later usage
+		self.variety = variety
+
 		# The gdb extension does not support value template arguments - need to extract them by hand
 		type = val.type
 		if type.code == gdb.TYPE_CODE_REF:
@@ -54,21 +49,23 @@ class EigenMatrixPrinter:
 		regex = re.compile('\<.*\>')
 		m = regex.findall(tag)[0][1:-1]
 		template_params = m.split(',')
-		template_params = map(lambda x:x.replace(" ", ""), template_params)
+		template_params = [x.replace(" ", "") for x in template_params]
 
-		self.rows = int(template_params[1])
-		self.cols = int(template_params[2])
+		if template_params[1] == '-0x00000000000000001' or template_params[1] == '-0x000000001' or template_params[1] == '-1':
+			self.rows = val['m_storage']['m_rows']
+		else:
+			self.rows = int(template_params[1])
+
+		if template_params[2] == '-0x00000000000000001' or template_params[2] == '-0x000000001' or template_params[2] == '-1':
+			self.cols = val['m_storage']['m_cols']
+		else:
+			self.cols = int(template_params[2])
+
 		self.options = 0 # default value
 		if len(template_params) > 3:
 			self.options = template_params[3];
 
 		self.rowMajor = (int(self.options) & 0x1)
-
-		if self.rows == 10000:
-			self.rows = val['m_storage']['m_rows']
-
-		if self.cols == 10000:
-			self.cols = val['m_storage']['m_cols']
 
 		self.innerType = self.type.template_argument(0)
 
@@ -93,6 +90,9 @@ class EigenMatrixPrinter:
 			return self
 
 		def next(self):
+                        return self.__next__()  # Python 2.x compatibility
+
+		def __next__(self):
 
 			row = self.currentRow
 			col = self.currentCol
@@ -127,7 +127,7 @@ class EigenMatrixPrinter:
 		return self._iterator(self.rows, self.cols, self.data, self.rowMajor)
 
 	def to_string(self):
-		return "Eigen::Matrix<%s,%d,%d,%s> (data ptr: %s)" % (self.innerType, self.rows, self.cols, "RowMajor" if self.rowMajor else  "ColMajor", self.data)
+		return "Eigen::%s<%s,%d,%d,%s> (data ptr: %s)" % (self.variety, self.innerType, self.rows, self.cols, "RowMajor" if self.rowMajor else  "ColMajor", self.data)
 
 class EigenQuaternionPrinter:
 	"Print an Eigen Quaternion"
@@ -156,6 +156,9 @@ class EigenQuaternionPrinter:
 			return self
 
 		def next(self):
+                        return self.__next__()  # Python 2.x compatibility
+
+		def __next__(self):
 			element = self.currentElement
 
 			if self.currentElement >= 4: #there are 4 elements in a quanternion
@@ -176,7 +179,8 @@ class EigenQuaternionPrinter:
 
 def build_eigen_dictionary ():
 	pretty_printers_dict[re.compile('^Eigen::Quaternion<.*>$')] = lambda val: EigenQuaternionPrinter(val)
-	pretty_printers_dict[re.compile('^Eigen::Matrix<.*>$')] = lambda val: EigenMatrixPrinter(val)
+	pretty_printers_dict[re.compile('^Eigen::Matrix<.*>$')] = lambda val: EigenMatrixPrinter("Matrix", val)
+	pretty_printers_dict[re.compile('^Eigen::Array<.*>$')]  = lambda val: EigenMatrixPrinter("Array",  val)
 
 def register_eigen_printers(obj):
 	"Register eigen pretty-printers with objfile Obj"
