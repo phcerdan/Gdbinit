@@ -1,3 +1,4 @@
+*build*/
 .gdbinit.local
 .gdb/history
 *.pyc

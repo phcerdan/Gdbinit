@@ -40,7 +40,7 @@ set height 0
 set width 0
 
 set $SHOW_CONTEXT = 1
-set $SHOW_NEST_INSN = 0
+set $SHOW_NEST_INSN = 1
 
 set $CONTEXTSIZE_STACK = 6
 set $CONTEXTSIZE_DATA  = 8
@@ -77,7 +77,9 @@ source ~/.gdb/macsbug.gdb
 source ~/.gdb/carbon.gdb
 source ~/.gdb/profile.gdb
 
-source ~/.gdb/c++.gdb
+# STL support already included in modern gdb.
+#source ~/.gdb/c++.gdb
+source ~/.gdb/boost.gdb
 source ~/.gdb/eigen.gdb
 
 # The following is commented out because it caused errors last time for me (egall)
